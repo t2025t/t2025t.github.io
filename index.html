@@ -23,7 +23,7 @@
             border: 1px solid #ccc;
             background: white;
             position: relative;
-            width: 100%; /* Full width to prevent the ghost from being restricted */
+            width: 80%; /* Make the grid container size fit */
         }
 
         .row,
@@ -143,8 +143,11 @@
             const header = event.target.closest(".header");
             if (!header) return;
 
+            // Remove "ghost" class from all headers
+            document.querySelectorAll(".header").forEach(h => h.classList.remove("ghost"));
+
             dragIndex = Number(header.dataset.index);
-            header.classList.add("ghost");
+            header.classList.add("ghost");  // Only apply to the dragged header
             createDragClone(event, header, columnOrder[dragIndex]);
 
             if (isTouch) {
@@ -157,6 +160,9 @@
         }
 
         function createDragClone(e, element, columnKey) {
+            // Remove any previous drag clone if exists
+            if (dragClone) dragClone.remove();
+
             const rect = element.getBoundingClientRect();
             startX = e.clientX;
             startY = e.clientY;
@@ -211,6 +217,9 @@
                 dragClone.remove();
                 dragClone = null;
             }
+
+            // Reset ghost class when dragging ends
+            document.querySelectorAll(".header").forEach(header => header.classList.remove("ghost"));
         }
 
         renderGrid();
