@@ -85,12 +85,13 @@
             { A: "Row 3-A", B: "Row 3-B", C: "Row 3-C", D: "Row 3-D", E: "Row 3-E" },
             { A: "Row 4-A", B: "Row 4-B", C: "Row 4-C", D: "Row 4-D", E: "Row 4-E" },
         ];
-        
+
         const grid = document.querySelector(".grid");
         let dragIndex = null;
         let dragClone = null;
         let startX = 0, startY = 0;
         let headerRects = [];
+        let touchOffsetX = 0, touchOffsetY = 0; // For consistent touch offset
 
         function createHeader(col, index) {
             const header = document.createElement("div");
@@ -147,7 +148,9 @@
             createDragClone(event, header, columnOrder[dragIndex]);
 
             if (isTouch) {
-                document.addEventListener("touchmove", onMove, { passive: false });
+                touchOffsetX = event.clientX - header.getBoundingClientRect().left;
+                touchOffsetY = event.clientY - header.getBoundingClientRect().top;
+                document.addEventListener("touchmove", throttledMove, { passive: false });
                 document.addEventListener("touchend", onEnd, { once: true });
             } else {
                 document.addEventListener("mousemove", onMove);
@@ -174,8 +177,7 @@
 
         function onMove(e) {
             e.preventDefault();
-            const isTouch = e.type.startsWith("touch");
-            const event = isTouch ? e.touches[0] : e;
+            const event = e;
 
             if (!dragClone) return;
             dragClone.style.transform = `translate3d(${event.clientX - startX}px, ${event.clientY - startY}px, 0)`;
@@ -202,12 +204,33 @@
 
         function onEnd() {
             document.removeEventListener("mousemove", onMove);
-            document.removeEventListener("touchmove", onMove);
+            document.removeEventListener("touchmove", throttledMove);
             if (dragClone) {
                 dragClone.remove();
                 dragClone = null;
             }
         }
+
+        function throttle(func, delay) {
+            let timeoutId;
+            return function (...args) {
+                if (!timeoutId) {
+                    timeoutId = setTimeout(() => {
+                        func.apply(this, args);
+                        timeoutId = null;
+                    }, delay);
+                }
+            };
+        }
+
+        const throttledMove = throttle(function (e) {
+            e.preventDefault();
+            const event = e.touches[0];
+            if (!dragClone) return;
+            dragClone.style.left = `${event.clientX - touchOffsetX}px`;
+            dragClone.style.top = `${event.clientY - touchOffsetY}px`;
+            handleColumnSwap(event);
+        }, 16);
 
         renderGrid();
     </script>
