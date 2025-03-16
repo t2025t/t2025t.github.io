@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Optimized Row-Based Column Moving</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+            user-select: none;
+        }
+
+        .grid {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #ccc;
+            background: white;
+            position: relative;
+        }
+
+        .row,
+        .header-row {
+            display: flex;
+        }
+
+        .header {
+            padding: 10px;
+            font-weight: bold;
+            text-align: center;
+            cursor: grab;
+            flex: 1;
+            border-right: 1px solid #ccc;
+            background-color: var(--header-color);
+        }
+
+        .cell {
+            padding: 10px;
+            text-align: center;
+            border-right: 1px solid #ddd;
+            flex: 1;
+        }
+
+        .ghost {
+            opacity: 0.3;
+        }
+
+        .dragging-item {
+            position: fixed;
+            pointer-events: none;
+            border: 1px solid #aaa;
+            padding: 10px;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+            opacity: 0.8;
+            background-color: white;
+            z-index: 1000;
+            transform: translate3d(0, 0, 0);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="grid"></div>
+
+    <script>
+        const columnOrder = ["A", "B", "C", "D", "E"];
+        const columnColors = { 
+            A: "lightblue", 
+            B: "lightgreen", 
+            C: "lightcoral", 
+            D: "lightgoldenrodyellow", 
+            E: "lightsalmon"
+        };
+        const gridData = [
+            { A: "Row 1-A", B: "Row 1-B", C: "Row 1-C", D: "Row 1-D", E: "Row 1-E" },
+            { A: "Row 2-A", B: "Row 2-B", C: "Row 2-C", D: "Row 2-D", E: "Row 2-E" },
+            { A: "Row 3-A", B: "Row 3-B", C: "Row 3-C", D: "Row 3-D", E: "Row 3-E" },
+            { A: "Row 4-A", B: "Row 4-B", C: "Row 4-C", D: "Row 4-D", E: "Row 4-E" },
+        ];
+        
+
+        const grid = document.querySelector(".grid");
+        let dragIndex = null;
+        let dragClone = null;
+        let startX = 0, startY = 0, offsetX = 0, offsetY = 0;
+        let headerRects = [];
+
+        function createHeader(col, index) {
+            const header = document.createElement("div");
+            header.classList.add("header");
+            header.dataset.index = index;
+            header.dataset.column = col;
+            header.textContent = `Header ${col}`;
+            header.style.setProperty("--header-color", columnColors[col]);
+            header.setAttribute("role", "button");
+            header.setAttribute("tabindex", "0");
+            return header;
+        }
+
+        function createRow(rowData) {
+            const row = document.createElement("div");
+            row.classList.add("row");
+            columnOrder.forEach(col => {
+                const cell = document.createElement("div");
+                cell.classList.add("cell");
+                cell.textContent = rowData[col];
+                row.appendChild(cell);
+            });
+            return row;
+        }
+
+        function renderGrid() {
+            grid.innerHTML = "";
+            const headerRow = document.createElement("div");
+            headerRow.classList.add("header-row");
+            columnOrder.forEach((col, index) => {
+                headerRow.appendChild(createHeader(col, index));
+            });
+            grid.appendChild(headerRow);
+            gridData.forEach(rowData => grid.appendChild(createRow(rowData)));
+            updateHeaderRects();
+        }
+
+        function updateHeaderRects() {
+            headerRects = [...grid.querySelectorAll(".header")].map(header => header.getBoundingClientRect());
+        }
+
+        grid.addEventListener("pointerdown", (e) => {
+            const header = e.target.closest(".header");
+            if (!header) return;
+            dragIndex = Number(header.dataset.index);
+            header.classList.add("ghost");
+            createDragClone(e, header, columnOrder[dragIndex]);
+            document.addEventListener("pointermove", onDrag);
+            document.addEventListener("pointerup", onDrop, { once: true });
+        });
+
+        function createDragClone(e, element, columnkey) {
+            const rect = element.getBoundingClientRect();
+            startX = e.clientX;
+            startY = e.clientY;
+            offsetX = rect.width / 2;
+            offsetY = rect.height / 2;
+
+            dragClone = element.cloneNode(true);
+            dragClone.classList.add("dragging-item");
+            dragClone.style.backgroundColor = columnColors[columnkey];
+            // Explicitly fix the size by removing flex properties
+            dragClone.style.boxSizing = "border-box";
+            dragClone.style.width = `${rect.width}px`;
+            dragClone.style.height = `${rect.height}px`;
+            dragClone.style.flex = "0 0 auto";
+            dragClone.style.left = `${e.clientX - offsetX}px`;
+            dragClone.style.top = `${e.clientY - offsetY}px`;
+
+            document.body.appendChild(dragClone);
+        }
+
+        function onDrag(e) {
+            if (!dragClone) return;
+            requestAnimationFrame(() => {
+                if (dragClone) {
+                    dragClone.style.transform = `translate3d(${e.clientX - startX}px, ${e.clientY - startY}px, 0)`;
+                    handleColumnSwap(e);
+                }
+            });
+        }
+
+        function handleColumnSwap(e) {
+            const newIndex = headerRects.findIndex(rect => e.clientX > rect.left && e.clientX < rect.right);
+            if (newIndex === -1 || newIndex === dragIndex) return; // Prevent unnecessary swaps
+            swapColumns(dragIndex, newIndex);
+        }
+
+
+        function swapColumns(fromIndex, toIndex) {
+            const [movedCol] = columnOrder.splice(fromIndex, 1);
+            columnOrder.splice(toIndex, 0, movedCol);
+            dragIndex = toIndex;
+            updateGridHeaders();
+        }
+
+        function updateGridHeaders() {
+            const headers = [...grid.querySelector(".header-row").children];
+            columnOrder.forEach((col, index) => {
+                headers[index].textContent = `Header ${col}`;
+                headers[index].dataset.index = index;
+                headers[index].style.setProperty("--header-color", columnColors[col]);
+            });
+            // Ensure only the header corresponding to the dragged column has the ghost effect
+            headers.forEach(header => header.classList.remove("ghost"));
+            if (dragClone && headers[dragIndex]) {
+                headers[dragIndex].classList.add("ghost");
+            }
+            // Also update cell texts in rows
+            const rows = document.querySelectorAll(".row");
+            rows.forEach((row, rowIndex) => {
+                const cells = row.querySelectorAll(".cell");
+                columnOrder.forEach((col, index) => {
+                    cells[index].textContent = gridData[rowIndex][col];
+                });
+            });
+            updateHeaderRects();
+        }
+
+        function onDrop() {
+            document.removeEventListener("pointermove", onDrag);
+            document.querySelectorAll(".header").forEach(header => header.classList.remove("ghost"));
+            if (dragClone) {
+                dragClone.remove();
+                dragClone = null;
+            }
+        }
+
+        // Keyboard support for moving columns
+        grid.addEventListener("keydown", (e) => {
+            const focusedHeader = document.activeElement;
+            if (!focusedHeader.classList.contains("header")) return;
+            const currentIndex = Number(focusedHeader.dataset.index);
+            if (e.key === "ArrowLeft" && currentIndex > 0) {
+                swapColumns(currentIndex, currentIndex - 1);
+                focusedHeader.previousElementSibling.focus();
+            }
+            if (e.key === "ArrowRight" && currentIndex < columnOrder.length - 1) {
+                swapColumns(currentIndex, currentIndex + 1);
+                focusedHeader.nextElementSibling.focus();
+            }
+        });
+
+        renderGrid();
+    </script>
+</body>
+
+</html>
