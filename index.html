@@ -38,6 +38,7 @@
             flex: 1;
             border-right: 1px solid #ccc;
             background-color: var(--header-color);
+            touch-action: none;
         }
 
         .cell {
@@ -102,6 +103,7 @@
             header.style.setProperty("--header-color", columnColors[col]);
             header.setAttribute("role", "button");
             header.setAttribute("tabindex", "0");
+            header.addEventListener("selectstart", (e) => e.preventDefault());
             return header;
         }
 
@@ -186,6 +188,7 @@
             dragIndex = Number(header.dataset.index);
             header.classList.add("ghost");
             createDragClone(clientX, clientY, header, columnOrder[dragIndex]);
+            dragClone.style.pointerEvents = "none";
         }
 
         function dragMove(clientX, clientY) {
