@@ -173,6 +173,7 @@
             if (!isDragging || !e.touches.length) return;
             const touch = e.touches[0];
             dragMove(touch.clientX, touch.clientY);
+            if(isDragging){ e.preventDefault(); }
         }
 
         function handleTouchEnd(e) {
