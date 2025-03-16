@@ -14,7 +14,7 @@
             height: 100vh;
             margin: 0;
             background-color: #f4f4f4;
-            /* user-select: none; /* Consider commenting this out if still having issues */
+            user-select: none;
         }
 
         .grid {
@@ -90,7 +90,7 @@
         let dragIndex = null;
         let dragClone = null;
         let startX = 0, startY = 0, offsetX = 0, offsetY = 0;
-        let headerRects =;
+        let headerRects = [];
 
         function createHeader(col, index) {
             const header = document.createElement("div");
@@ -132,45 +132,43 @@
             headerRects = [...grid.querySelectorAll(".header")].map(header => header.getBoundingClientRect());
         }
 
-        grid.addEventListener("pointerdown", (e) => {
-            e.preventDefault(); // Prevent default touch behavior
+        function onPointerStart(e) {
             const header = e.target.closest(".header");
             if (!header) return;
-            header.setPointerCapture(e.pointerId); // Capture pointer events for consistent touch tracking
             dragIndex = Number(header.dataset.index);
             header.classList.add("ghost");
             createDragClone(e, header, columnOrder[dragIndex]);
             document.addEventListener("pointermove", onDrag);
             document.addEventListener("pointerup", onDrop, { once: true });
-        });
+        }
 
         function createDragClone(e, element, columnkey) {
             const rect = element.getBoundingClientRect();
-            startX = e.clientX;
-            startY = e.clientY;
+            startX = e.clientX || e.touches[0].clientX;
+            startY = e.clientY || e.touches[0].clientY;
             offsetX = rect.width / 2;
             offsetY = rect.height / 2;
 
             dragClone = element.cloneNode(true);
             dragClone.classList.add("dragging-item");
             dragClone.style.backgroundColor = columnColors[columnkey];
-            // Explicitly fix the size by removing flex properties
             dragClone.style.boxSizing = "border-box";
             dragClone.style.width = `${rect.width}px`;
             dragClone.style.height = `${rect.height}px`;
             dragClone.style.flex = "0 0 auto";
-            dragClone.style.left = `${e.clientX - offsetX}px`;
-            dragClone.style.top = `${e.clientY - offsetY}px`;
+            dragClone.style.left = `${startX - offsetX}px`;
+            dragClone.style.top = `${startY - offsetY}px`;
 
             document.body.appendChild(dragClone);
         }
 
         function onDrag(e) {
-            e.preventDefault(); // Prevent default touch behavior
             if (!dragClone) return;
             requestAnimationFrame(() => {
                 if (dragClone) {
-                    dragClone.style.transform = `translate3d(${e.clientX - startX}px, ${e.clientY - startY}px, 0)`;
+                    const moveX = e.clientX || e.touches[0].clientX;
+                    const moveY = e.clientY || e.touches[0].clientY;
+                    dragClone.style.transform = `translate3d(${moveX - startX}px, ${moveY - startY}px, 0)`;
                     handleColumnSwap(e);
                 }
             });
@@ -178,10 +176,9 @@
 
         function handleColumnSwap(e) {
             const newIndex = headerRects.findIndex(rect => e.clientX > rect.left && e.clientX < rect.right);
-            if (newIndex === -1 || newIndex === dragIndex) return; // Prevent unnecessary swaps
+            if (newIndex === -1 || newIndex === dragIndex) return;
             swapColumns(dragIndex, newIndex);
         }
-
 
         function swapColumns(fromIndex, toIndex) {
             const [movedCol] = columnOrder.splice(fromIndex, 1);
@@ -197,12 +194,10 @@
                 headers[index].dataset.index = index;
                 headers[index].style.setProperty("--header-color", columnColors[col]);
             });
-            // Ensure only the header corresponding to the dragged column has the ghost effect
             headers.forEach(header => header.classList.remove("ghost"));
             if (dragClone && headers[dragIndex]) {
                 headers[dragIndex].classList.add("ghost");
             }
-            // Also update cell texts in rows
             const rows = document.querySelectorAll(".row");
             rows.forEach((row, rowIndex) => {
                 const cells = row.querySelectorAll(".cell");
@@ -222,20 +217,8 @@
             }
         }
 
-        // Keyboard support for moving columns
-        grid.addEventListener("keydown", (e) => {
-            const focusedHeader = document.activeElement;
-            if (!focusedHeader.classList.contains("header")) return;
-            const currentIndex = Number(focusedHeader.dataset.index);
-            if (e.key === "ArrowLeft" && currentIndex > 0) {
-                swapColumns(currentIndex, currentIndex - 1);
-                focusedHeader.previousElementSibling.focus();
-            }
-            if (e.key === "ArrowRight" && currentIndex < columnOrder.length - 1) {
-                swapColumns(currentIndex, currentIndex + 1);
-                focusedHeader.nextElementSibling.focus();
-            }
-        });
+        grid.addEventListener("pointerdown", onPointerStart, { passive: true });
+        grid.addEventListener("touchstart", onPointerStart, { passive: true });
 
         renderGrid();
     </script>
