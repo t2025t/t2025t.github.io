@@ -14,7 +14,7 @@
             height: 100vh;
             margin: 0;
             background-color: #f4f4f4;
-            user-select: none;
+            /* user-select: none; /* Consider commenting this out if still having issues */
         }
 
         .grid {
@@ -72,11 +72,11 @@
 
     <script>
         const columnOrder = ["A", "B", "C", "D", "E"];
-        const columnColors = { 
-            A: "lightblue", 
-            B: "lightgreen", 
-            C: "lightcoral", 
-            D: "lightgoldenrodyellow", 
+        const columnColors = {
+            A: "lightblue",
+            B: "lightgreen",
+            C: "lightcoral",
+            D: "lightgoldenrodyellow",
             E: "lightsalmon"
         };
         const gridData = [
@@ -90,7 +90,7 @@
         let dragIndex = null;
         let dragClone = null;
         let startX = 0, startY = 0, offsetX = 0, offsetY = 0;
-        let headerRects = [];
+        let headerRects =;
 
         function createHeader(col, index) {
             const header = document.createElement("div");
@@ -133,8 +133,10 @@
         }
 
         grid.addEventListener("pointerdown", (e) => {
+            e.preventDefault(); // Prevent default touch behavior
             const header = e.target.closest(".header");
             if (!header) return;
+            header.setPointerCapture(e.pointerId); // Capture pointer events for consistent touch tracking
             dragIndex = Number(header.dataset.index);
             header.classList.add("ghost");
             createDragClone(e, header, columnOrder[dragIndex]);
@@ -164,6 +166,7 @@
         }
 
         function onDrag(e) {
+            e.preventDefault(); // Prevent default touch behavior
             if (!dragClone) return;
             requestAnimationFrame(() => {
                 if (dragClone) {
