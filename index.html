@@ -91,6 +91,7 @@
         let dragClone = null;
         let startX = 0, startY = 0, offsetX = 0, offsetY = 0;
         let headerRects = [];
+        let isDragging = false; // Flag to prevent events from conflicting
 
         function createHeader(col, index) {
             const header = document.createElement("div");
@@ -132,22 +133,86 @@
             headerRects = [...grid.querySelectorAll(".header")].map(header => header.getBoundingClientRect());
         }
 
-        function onPointerStart(e) {
+        // Mouse Events
+        grid.addEventListener("mousedown", handleMouseDown);
+        document.addEventListener("mousemove", handleMouseMove);
+        document.addEventListener("mouseup", handleMouseUp);
+
+        // Touch Events
+        grid.addEventListener("touchstart", handleTouchStart, { passive: true });
+        document.addEventListener("touchmove", handleTouchMove, { passive: true });
+        document.addEventListener("touchend", handleTouchEnd, { passive: true });
+        document.addEventListener("touchcancel", handleTouchEnd, { passive: true }); // treat touchcancel as touchend
+
+        function handleMouseDown(e) {
+            if (isDragging) return;
             const header = e.target.closest(".header");
             if (!header) return;
-            dragIndex = Number(header.dataset.index);
-            header.classList.add("ghost");
-            createDragClone(e, header, columnOrder[dragIndex]);
-            document.addEventListener("pointermove", onDrag);
-            document.addEventListener("pointerup", onDrop, { once: true });
+            dragStart(e.clientX, e.clientY, header);
         }
 
-        function createDragClone(e, element, columnkey) {
+        function handleMouseMove(e) {
+            if (!isDragging) return;
+            dragMove(e.clientX, e.clientY);
+        }
+
+        function handleMouseUp(e) {
+            if (!isDragging) return;
+            dragEnd();
+        }
+
+        function handleTouchStart(e) {
+            if (isDragging) return;
+            const header = e.target.closest(".header");
+            if (!header || !e.touches.length) return;
+            const touch = e.touches[0];
+            dragStart(touch.clientX, touch.clientY, header);
+        }
+
+        function handleTouchMove(e) {
+            if (!isDragging || !e.touches.length) return;
+            const touch = e.touches[0];
+            dragMove(touch.clientX, touch.clientY);
+        }
+
+        function handleTouchEnd(e) {
+            if (!isDragging) return;
+            dragEnd();
+        }
+
+        function dragStart(clientX, clientY, header) {
+            isDragging = true;
+            dragIndex = Number(header.dataset.index);
+            header.classList.add("ghost");
+            createDragClone(clientX, clientY, header, columnOrder[dragIndex]);
+        }
+
+        function dragMove(clientX, clientY) {
+            if (!dragClone) return;
+            requestAnimationFrame(() => {
+                if (dragClone) {
+                    dragClone.style.left = `${clientX - offsetX}px`;
+                    dragClone.style.top = `${clientY - offsetY}px`;
+                    handleColumnSwap(clientX);
+                }
+            });
+        }
+
+        function dragEnd() {
+            isDragging = false;
+            document.querySelectorAll(".header").forEach(header => header.classList.remove("ghost"));
+            if (dragClone) {
+                dragClone.remove();
+                dragClone = null;
+            }
+        }
+
+        function createDragClone(clientX, clientY, element, columnkey) {
             const rect = element.getBoundingClientRect();
-            startX = e.clientX || e.touches[0].clientX;
-            startY = e.clientY || e.touches[0].clientY;
-            offsetX = rect.width / 2;
-            offsetY = rect.height / 2;
+            startX = clientX;
+            startY = clientY;
+            offsetX = clientX - rect.left;
+            offsetY = clientY - rect.top;
 
             dragClone = element.cloneNode(true);
             dragClone.classList.add("dragging-item");
@@ -156,26 +221,14 @@
             dragClone.style.width = `${rect.width}px`;
             dragClone.style.height = `${rect.height}px`;
             dragClone.style.flex = "0 0 auto";
-            dragClone.style.left = `${startX - offsetX}px`;
-            dragClone.style.top = `${startY - offsetY}px`;
+            dragClone.style.left = `${rect.left}px`;
+            dragClone.style.top = `${rect.top}px`;
 
             document.body.appendChild(dragClone);
         }
 
-        function onDrag(e) {
-            if (!dragClone) return;
-            requestAnimationFrame(() => {
-                if (dragClone) {
-                    const moveX = e.clientX || e.touches[0].clientX;
-                    const moveY = e.clientY || e.touches[0].clientY;
-                    dragClone.style.transform = `translate3d(${moveX - startX}px, ${moveY - startY}px, 0)`;
-                    handleColumnSwap(e);
-                }
-            });
-        }
-
-        function handleColumnSwap(e) {
-            const newIndex = headerRects.findIndex(rect => e.clientX > rect.left && e.clientX < rect.right);
+        function handleColumnSwap(clientX) {
+            const newIndex = headerRects.findIndex(rect => clientX > rect.left && clientX < rect.right);
             if (newIndex === -1 || newIndex === dragIndex) return;
             swapColumns(dragIndex, newIndex);
         }
@@ -208,17 +261,19 @@
             updateHeaderRects();
         }
 
-        function onDrop() {
-            document.removeEventListener("pointermove", onDrag);
-            document.querySelectorAll(".header").forEach(header => header.classList.remove("ghost"));
-            if (dragClone) {
-                dragClone.remove();
-                dragClone = null;
+        grid.addEventListener("keydown", (e) => {
+            const focusedHeader = document.activeElement;
+            if (!focusedHeader.classList.contains("header")) return;
+            const currentIndex = Number(focusedHeader.dataset.index);
+            if (e.key === "ArrowLeft" && currentIndex > 0) {
+                swapColumns(currentIndex, currentIndex - 1);
+                focusedHeader.previousElementSibling.focus();
             }
-        }
-
-        grid.addEventListener("pointerdown", onPointerStart, { passive: true });
-        grid.addEventListener("touchstart", onPointerStart, { passive: true });
+            if (e.key === "ArrowRight" && currentIndex < columnOrder.length - 1) {
+                swapColumns(currentIndex, currentIndex + 1);
+                focusedHeader.nextElementSibling.focus();
+            }
+        });
 
         renderGrid();
     </script>
