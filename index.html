@@ -23,6 +23,7 @@
             border: 1px solid #ccc;
             background: white;
             position: relative;
+            width: 100%; /* Full width to prevent the ghost from being restricted */
         }
 
         .row,
@@ -91,7 +92,6 @@
         let dragClone = null;
         let startX = 0, startY = 0;
         let headerRects = [];
-        let touchOffsetX = 0, touchOffsetY = 0; // For consistent touch offset
 
         function createHeader(col, index) {
             const header = document.createElement("div");
@@ -148,9 +148,7 @@
             createDragClone(event, header, columnOrder[dragIndex]);
 
             if (isTouch) {
-                touchOffsetX = event.clientX - header.getBoundingClientRect().left;
-                touchOffsetY = event.clientY - header.getBoundingClientRect().top;
-                document.addEventListener("touchmove", throttledMove, { passive: false });
+                document.addEventListener("touchmove", onMove, { passive: false });
                 document.addEventListener("touchend", onEnd, { once: true });
             } else {
                 document.addEventListener("mousemove", onMove);
@@ -163,23 +161,27 @@
             startX = e.clientX;
             startY = e.clientY;
 
+            // Create the drag clone
             dragClone = element.cloneNode(true);
             dragClone.classList.add("dragging-item");
-            dragClone.style.boxSizing = "border-box";
             dragClone.style.backgroundColor = columnColors[columnKey];
             dragClone.style.width = `${rect.width}px`;
             dragClone.style.height = `${rect.height}px`;
             dragClone.style.left = `${e.clientX - rect.width / 2}px`;
             dragClone.style.top = `${e.clientY - rect.height / 2}px`;
 
+            // Append the drag clone outside of the grid container
             document.body.appendChild(dragClone);
         }
 
         function onMove(e) {
             e.preventDefault();
-            const event = e;
+            const isTouch = e.type.startsWith("touch");
+            const event = isTouch ? e.touches[0] : e;
 
             if (!dragClone) return;
+
+            // Update the position of the drag clone
             dragClone.style.transform = `translate3d(${event.clientX - startX}px, ${event.clientY - startY}px, 0)`;
             handleColumnSwap(event);
         }
@@ -204,33 +206,12 @@
 
         function onEnd() {
             document.removeEventListener("mousemove", onMove);
-            document.removeEventListener("touchmove", throttledMove);
+            document.removeEventListener("touchmove", onMove);
             if (dragClone) {
                 dragClone.remove();
                 dragClone = null;
             }
         }
-
-        function throttle(func, delay) {
-            let timeoutId;
-            return function (...args) {
-                if (!timeoutId) {
-                    timeoutId = setTimeout(() => {
-                        func.apply(this, args);
-                        timeoutId = null;
-                    }, delay);
-                }
-            };
-        }
-
-        const throttledMove = throttle(function (e) {
-            e.preventDefault();
-            const event = e.touches[0];
-            if (!dragClone) return;
-            dragClone.style.left = `${event.clientX - touchOffsetX}px`;
-            dragClone.style.top = `${event.clientY - touchOffsetY}px`;
-            handleColumnSwap(event);
-        }, 16);
 
         renderGrid();
     </script>
