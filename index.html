@@ -1,286 +1,248 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="cs">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Optimized Row-Based Column Moving</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f4f4f4;
-            user-select: none;
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BIEBLHYGGE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Forum&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@200..800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-        .grid {
-            display: flex;
-            flex-direction: column;
-            border: 1px solid #ccc;
-            background: white;
-            position: relative;
-        }
+    body {
+      margin: 0;
+      font-family: 'Playfair Display';
+      color: #111;
+    }
 
-        .row,
-        .header-row {
-            display: flex;
-        }
+    a {
+      text-decoration: none;
+    }
 
-        .header {
-            padding: 10px;
-            font-weight: bold;
-            text-align: center;
-            cursor: grab;
-            flex: 1;
-            border-right: 1px solid #ccc;
-            background-color: var(--header-color);
-            touch-action: none;
-        }
+    html {
+      scroll-behavior: smooth;
+    }
 
-        .cell {
-            padding: 10px;
-            text-align: center;
-            border-right: 1px solid #ddd;
-            flex: 1;
-        }
+    .hero {
+      position: relative;
+      height: 100vh;
+      width: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-evenly;
+      text-align: center;
+    }
 
-        .ghost {
-            opacity: 0.3;
-        }
+    .hero-img {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      filter: grayscale(60%) contrast(0.9);
+      z-index: 0;
+    }
 
-        .dragging-item {
-            position: fixed;
-            pointer-events: none;
-            border: 1px solid #aaa;
-            padding: 10px;
-            font-weight: bold;
-            text-align: center;
-            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
-            opacity: 0.8;
-            background-color: white;
-            z-index: 1000;
-            transform: translate3d(0, 0, 0);
-        }
-    </style>
+    .hero-inner {
+      position: relative;
+      z-index: 2;
+      padding: 0 0px;
+      color: white;
+      max-width: 900px;
+    }
+
+    .hero h1 {
+      font-size: 32px;
+      line-height: 1.62;
+      margin: 0;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+    }
+
+    .btn {
+      display: inline-block;
+      margin-top: 34px;
+      background: #00000023;
+      padding: 12px 36px;
+      text-decoration: none;
+      color: #ffffff;
+      border-radius: 10px;
+    }
+
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 30;
+    }
+
+    .logo-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #00000023;
+      border-radius: 50%;
+      width: 200px;
+      height: 200px;
+      padding-bottom: 30px;
+    }
+
+    #crown {
+      fill: #ffffff;
+      width: 80px;
+      height: 50px;
+      ;
+      stroke-width: 100;
+      stroke: antiquewhite;
+    }
+
+    .title {
+      font-family: 'Forum';
+      font-size: 2rem;
+      color: white;
+    }
+
+    .subtitle {
+      font-family: 'Assistant';
+      color: #ffffff;
+      font-size: 0.8rem;
+    }
+
+    .bi {
+      width: 22px;
+      height: 22px;
+      fill: #ffffff;
+    }
+
+    .social-icons {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      z-index: 30;
+      margin-bottom: 60px;
+      margin-top: 40px;
+    }
+
+    .footer-section {
+      background: #828792;
+      padding: 90px 20px;
+      color: antiquewhite;
+    }
+
+    .footer-content {
+      max-width: 700px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .footer-logo {
+      font-size: 28px;
+    }
+
+    .footer-text {
+      color: #ffffff;
+      font: 1rem;
+    }
+
+    .line {
+      width: 40px;
+      height: 2px;
+      background: antiquewhite;
+      margin: 25px auto;
+    }
+  </style>
 </head>
 
 <body>
-    <div class="grid"></div>
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <symbol id="icon-facebook" viewBox="0 0 16 16">
+      <path d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951" />
+    </symbol>
+    <symbol id="icon-instagram" viewBox="0 0 16 16">
+      <path
+        d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.9 3.9 0 0 0-1.417.923A3.9 3.9 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.9 3.9 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.9 3.9 0 0 0-.923-1.417A3.9 3.9 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 7.998 0zm-.717 1.442h.718c2.136 0 2.389.007 3.232.046.78.035 1.204.166 1.486.275.373.145.64.319.92.599s.453.546.598.92c.11.281.24.705.275 1.485.039.843.047 1.096.047 3.231s-.008 2.389-.047 3.232c-.035.78-.166 1.203-.275 1.485a2.5 2.5 0 0 1-.599.919c-.28.28-.546.453-.92.598-.28.11-.704.24-1.485.276-.843.038-1.096.047-3.232.047s-2.39-.009-3.233-.047c-.78-.036-1.203-.166-1.485-.276a2.5 2.5 0 0 1-.92-.598 2.5 2.5 0 0 1-.6-.92c-.109-.281-.24-.705-.275-1.485-.038-.843-.046-1.096-.046-3.233s.008-2.388.046-3.231c.036-.78.166-1.204.276-1.486.145-.373.319-.64.599-.92s.546-.453.92-.598c.282-.11.705-.24 1.485-.276.738-.034 1.024-.044 2.515-.045zm4.988 1.328a.96.96 0 1 0 0 1.92.96.96 0 0 0 0-1.92m-4.27 1.122a4.109 4.109 0 1 0 0 8.217 4.109 4.109 0 0 0 0-8.217m0 1.441a2.667 2.667 0 1 1 0 5.334 2.667 2.667 0 0 1 0-5.334" />
+    </symbol>
+    <symbol id="icon-tiktok" viewBox="0 0 16 16">
+      <path d="M9 0h1.98c.144.715.54 1.617 1.235 2.512C12.895 3.389 13.797 4 15 4v2c-1.753 0-3.07-.814-4-1.829V11a5 5 0 1 1-5-5v2a3 3 0 1 0 3 3z" />
+    </symbol>
+    <symbol id="logo" viewBox="0 0 500 300" preserveAspectRatio="xMidYMid meet">
+      <g transform="translate(0,300) scale(0.1,-0.1)" stroke="none">
+        <path d="M4580 2961 c-19 -10 -48 -35 -65 -56 -28 -34 -30 -43 -30 -118 0 -95 23 -154 68 -175 44 -21 149 17 206 76 l43 44 -4 79 c-3 70 -6 81 -33 109 -59 62 -121 76 -185 41z m131 -54 c49 -30 63 -110 29 -165 -36 -58 -147 -84 -184 -43 -27 30 -31 119 -8 160 34 62 106 84 163 48z" />
+        <path d="M2524 2901 c-47 -29 -71 -98 -56 -160 36 -152 49 -170 125 -171 78 0 148 59 163 139 10 50 -19 130 -61 171 -44 43 -121 53 -171 21z m136 -59 c41 -42 57 -101 39 -149 -30 -79 -98 -82 -150 -7 -44 65 -49 111 -14 152 36 43 84 44 125 4z" />
+        <path d="M278 2710 c-75 -62 -68 -173 13 -216 43 -22 120 -18 160 9 49 32 74 87 59 131 -14 43 -36 63 -99 87 -69 26 -90 24 -133 -11z m134 -50 c58 -16 65 -82 12 -110 -82 -44 -171 11 -133 81 19 36 61 45 121 29z" />
+        <path
+          d="M4505 2391 c-44 -27 -171 -162 -441 -471 -373 -427 -453 -525 -584 -720 -34 -50 -67 -93 -75 -96 -21 -8 -35 3 -116 95 -211 237 -252 307 -460 765 -117 259 -147 303 -201 292 -47 -9 -94 -60 -231 -246 -66 -91 -189 -255 -272 -365 -84 -110 -216 -290 -295 -400 -171 -241 -211 -285 -257 -285 -45 0 -68 25 -308 326 -304 380 -423 510 -645 705 -178 155 -216 173 -243 110 -8 -18 -13 -300 -19 -941 -4 -503 -8 -944 -7 -979 0 -136 40 -157 287 -147 535 20 1758 25 2187 8 176 -6 599 -12 939 -12 611 0 620 0 664 21 89 44 117 128 161 489 52 426 56 500 55 1025 -1 521 -12 752 -38 802 -24 47 -53 54 -101 24z m67 -101 c4 -25 12 -169 19 -320 20 -470 2 -1010 -47 -1400 -41 -325 -73 -441 -131 -471 -44 -22 -816 -24 -1558 -4 -386 11 -737 15 -930 12 -971 -18 -1431 -23 -1462 -16 -20 4 -41 13 -47 19 -7 7 -11 56 -10 138 1 70 3 499 5 953 4 869 4 867 47 852 29 -11 181 -143 308 -268 131 -129 320 -347 467 -539 160 -209 235 -294 280 -320 100 -59 129 -37 332 254 60 85 163 227 230 315 66 88 127 169 135 181 8 11 55 74 104 140 296 396 291 390 329 380 28 -7 49 -48 187 -356 142 -320 210 -432 380 -628 120 -139 157 -172 190 -172 33 0 41 8 131 145 108 164 257 347 648 790 271 307 330 367 361 363 21 -3 26 -10 32 -48z" />
+        <path d="M2283 1171 c-66 -62 -28 -205 140 -531 83 -158 111 -191 151 -172 33 15 179 190 265 318 77 114 111 193 111 259 0 85 -28 118 -101 117 -70 -1 -133 -48 -234 -174 -20 -27 -40 -48 -44 -48 -3 0 -26 34 -51 76 -88 148 -180 208 -237 155z m111 -72 c41 -35 95 -122 121 -192 10 -27 24 -51 31 -54 21 -8 51 15 90 69 100 139 154 188 208 188 94 0 65 -141 -68 -328 -65 -93 -182 -234 -202 -245 -9 -5 -22 -6 -29 -3 -15 5 -185 337 -212 411 -8 22 -18 64 -23 94 -16 92 19 117 84 60z" />
+      </g>
+    </symbol>
+  </svg>
+  <section class="hero">
+    <img class="hero-img" src="stars3.jpg" alt="Stars">
+    <header class="site-header">
+      <div class="logo-container">
+        <svg id="crown">
+          <use href="#logo"></use>
+        </svg>
+        <div class="title">BIEBLHYGGE</div>
+        <div class="subtitle">SCANDI HOME</div>
+      </div>
+    </header>
+    <div class="hero-inner">
+      <h1>Our new website is currently under construction <br> and will be <em>launching soon.</em> </h1>
+      <a class="btn" href="#contact">Contact</a>
+    </div>
+    <div class="social-icons">
+      <a href="https://facebook.com/yourhandle" target="_blank" aria-label="Follow us on Facebook">
+        <svg class="bi bi-facebook" fill="blue" width="64">
+          <use href="#icon-facebook"></use>
+        </svg>
+      </a>
 
-    <script>
-        const columnOrder = ["A", "B", "C", "D", "E"];
-        const columnColors = {
-            A: "lightblue",
-            B: "lightgreen",
-            C: "lightcoral",
-            D: "lightgoldenrodyellow",
-            E: "lightsalmon"
-        };
-        const gridData = [
-            { A: "Row 1-A", B: "Row 1-B", C: "Row 1-C", D: "Row 1-D", E: "Row 1-E" },
-            { A: "Row 2-A", B: "Row 2-B", C: "Row 2-C", D: "Row 2-D", E: "Row 2-E" },
-            { A: "Row 3-A", B: "Row 3-B", C: "Row 3-C", D: "Row 3-D", E: "Row 3-E" },
-            { A: "Row 4-A", B: "Row 4-B", C: "Row 4-C", D: "Row 4-D", E: "Row 4-E" },
-        ];
+      <a href="https://instagram.com/yourhandle" target="_blank" aria-label="Follow us on Instagram">
+        <svg class="bi bi-instagram" fill="blue" width="64">
+          <use href="#icon-instagram"></use>
+        </svg>
+      </a>
 
-        const grid = document.querySelector(".grid");
-        let dragIndex = null;
-        let dragClone = null;
-        let startX = 0, startY = 0, offsetX = 0, offsetY = 0;
-        let headerRects = [];
-        let isDragging = false; // Flag to prevent events from conflicting
+      <a href="https://tiktok.com/@yourhandle" target="_blank" aria-label="Follow us on TikTok">
+        <svg class="bi bi-tiktok" fill="blue" width="64">
+          <use href="#icon-tiktok"></use>
+        </svg>
+      </a>
+    </div>
+  </section>
 
-        function createHeader(col, index) {
-            const header = document.createElement("div");
-            header.classList.add("header");
-            header.dataset.index = index;
-            header.dataset.column = col;
-            header.textContent = `Header ${col}`;
-            header.style.setProperty("--header-color", columnColors[col]);
-            header.setAttribute("role", "button");
-            header.setAttribute("tabindex", "0");
-            header.addEventListener("selectstart", (e) => e.preventDefault());
-            return header;
-        }
+  <section class="footer-section">
+    <div class="footer-content">
+      <div class="footer-logo" id="contact">BIEBLHYGGE</div>
+      <div class="footer-text">Petra Biebl</div>
+      <div class="footer-text">Sídlo: tř. 28. října 1480/11, 370 01, České Budějovice</div>
+      <div class="footer-text">IČO: 06479413</div>
+      <div class="footer-text">DIČ: CZ8754091478</div>
+      <div class="line"></div>
+      <a class="footer-text" href="mailto:info@bieblhygge.com">info@bieblhygge.com</a>
+    </div>
+  </section>
+  <script>
+    if (location.hash) {
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  </script>
 
-        function createRow(rowData) {
-            const row = document.createElement("div");
-            row.classList.add("row");
-            columnOrder.forEach(col => {
-                const cell = document.createElement("div");
-                cell.classList.add("cell");
-                cell.textContent = rowData[col];
-                row.appendChild(cell);
-            });
-            return row;
-        }
-
-        function renderGrid() {
-            grid.innerHTML = "";
-            const headerRow = document.createElement("div");
-            headerRow.classList.add("header-row");
-            columnOrder.forEach((col, index) => {
-                headerRow.appendChild(createHeader(col, index));
-            });
-            grid.appendChild(headerRow);
-            gridData.forEach(rowData => grid.appendChild(createRow(rowData)));
-            updateHeaderRects();
-        }
-
-        function updateHeaderRects() {
-            headerRects = [...grid.querySelectorAll(".header")].map(header => header.getBoundingClientRect());
-        }
-
-        // Mouse Events
-        grid.addEventListener("mousedown", handleMouseDown);
-        document.addEventListener("mousemove", handleMouseMove);
-        document.addEventListener("mouseup", handleMouseUp);
-
-        // Touch Events
-        grid.addEventListener("touchstart", handleTouchStart, { passive: true });
-        document.addEventListener("touchmove", handleTouchMove, { passive: true });
-        document.addEventListener("touchend", handleTouchEnd, { passive: true });
-        document.addEventListener("touchcancel", handleTouchEnd, { passive: true }); // treat touchcancel as touchend
-
-        function handleMouseDown(e) {
-            if (isDragging) return;
-            const header = e.target.closest(".header");
-            if (!header) return;
-            dragStart(e.clientX, e.clientY, header);
-        }
-
-        function handleMouseMove(e) {
-            if (!isDragging) return;
-            dragMove(e.clientX, e.clientY);
-        }
-
-        function handleMouseUp(e) {
-            if (!isDragging) return;
-            dragEnd();
-        }
-
-        function handleTouchStart(e) {
-            if (isDragging) return;
-            const header = e.target.closest(".header");
-            if (!header || !e.touches.length) return;
-            const touch = e.touches[0];
-            dragStart(touch.clientX, touch.clientY, header);
-        }
-
-        function handleTouchMove(e) {
-            if (!isDragging || !e.touches.length) return;
-            const touch = e.touches[0];
-            dragMove(touch.clientX, touch.clientY);
-            if(isDragging){ e.preventDefault(); }
-        }
-
-        function handleTouchEnd(e) {
-            if (!isDragging) return;
-            dragEnd();
-        }
-
-        function dragStart(clientX, clientY, header) {
-            isDragging = true;
-            dragIndex = Number(header.dataset.index);
-            header.classList.add("ghost");
-            createDragClone(clientX, clientY, header, columnOrder[dragIndex]);
-            dragClone.style.pointerEvents = "none";
-        }
-
-        function dragMove(clientX, clientY) {
-            if (!dragClone) return;
-            requestAnimationFrame(() => {
-                if (dragClone) {
-                    dragClone.style.left = `${clientX - offsetX}px`;
-                    dragClone.style.top = `${clientY - offsetY}px`;
-                    handleColumnSwap(clientX);
-                }
-            });
-        }
-
-        function dragEnd() {
-            isDragging = false;
-            document.querySelectorAll(".header").forEach(header => header.classList.remove("ghost"));
-            if (dragClone) {
-                dragClone.remove();
-                dragClone = null;
-            }
-        }
-
-        function createDragClone(clientX, clientY, element, columnkey) {
-            const rect = element.getBoundingClientRect();
-            startX = clientX;
-            startY = clientY;
-            offsetX = clientX - rect.left;
-            offsetY = clientY - rect.top;
-
-            dragClone = element.cloneNode(true);
-            dragClone.classList.add("dragging-item");
-            dragClone.style.backgroundColor = columnColors[columnkey];
-            dragClone.style.boxSizing = "border-box";
-            dragClone.style.width = `${rect.width}px`;
-            dragClone.style.height = `${rect.height}px`;
-            dragClone.style.flex = "0 0 auto";
-            dragClone.style.left = `${rect.left}px`;
-            dragClone.style.top = `${rect.top}px`;
-
-            document.body.appendChild(dragClone);
-        }
-
-        function handleColumnSwap(clientX) {
-            const newIndex = headerRects.findIndex(rect => clientX > rect.left && clientX < rect.right);
-            if (newIndex === -1 || newIndex === dragIndex) return;
-            swapColumns(dragIndex, newIndex);
-        }
-
-        function swapColumns(fromIndex, toIndex) {
-            const [movedCol] = columnOrder.splice(fromIndex, 1);
-            columnOrder.splice(toIndex, 0, movedCol);
-            dragIndex = toIndex;
-            updateGridHeaders();
-        }
-
-        function updateGridHeaders() {
-            const headers = [...grid.querySelector(".header-row").children];
-            columnOrder.forEach((col, index) => {
-                headers[index].textContent = `Header ${col}`;
-                headers[index].dataset.index = index;
-                headers[index].style.setProperty("--header-color", columnColors[col]);
-            });
-            headers.forEach(header => header.classList.remove("ghost"));
-            if (dragClone && headers[dragIndex]) {
-                headers[dragIndex].classList.add("ghost");
-            }
-            const rows = document.querySelectorAll(".row");
-            rows.forEach((row, rowIndex) => {
-                const cells = row.querySelectorAll(".cell");
-                columnOrder.forEach((col, index) => {
-                    cells[index].textContent = gridData[rowIndex][col];
-                });
-            });
-            updateHeaderRects();
-        }
-
-        grid.addEventListener("keydown", (e) => {
-            const focusedHeader = document.activeElement;
-            if (!focusedHeader.classList.contains("header")) return;
-            const currentIndex = Number(focusedHeader.dataset.index);
-            if (e.key === "ArrowLeft" && currentIndex > 0) {
-                swapColumns(currentIndex, currentIndex - 1);
-                focusedHeader.previousElementSibling.focus();
-            }
-            if (e.key === "ArrowRight" && currentIndex < columnOrder.length - 1) {
-                swapColumns(currentIndex, currentIndex + 1);
-                focusedHeader.nextElementSibling.focus();
-            }
-        });
-
-        renderGrid();
-    </script>
 </body>
 
 </html>
